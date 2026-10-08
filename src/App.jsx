@@ -4,7 +4,6 @@ import { CameraGrid } from './components/CameraGrid';
 import { AlertSidebar } from './components/AlertSidebar';
 import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { ForensicSearchModal } from './components/ForensicSearchModal';
-import { VivaHelpModal } from './components/VivaHelpModal';
 import { TripwireModal } from './components/TripwireModal';
 import { ReportModal } from './components/ReportModal';
 import { CameraFeed } from './components/CameraFeed';
@@ -13,14 +12,13 @@ import { SCENARIO_STAGES } from './data/scenarioEngine';
 import { playAlertSound } from './utils/audioAlert';
 import { X, Bell } from 'lucide-react';
 
-export default function App({ showVivaButton = true }) {
+export default function App() {
   const [cameras, setCameras] = useState(INITIAL_CAMERAS);
   const [alerts, setAlerts] = useState(INITIAL_ALERTS);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState('grid');
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [tripwireCamera, setTripwireCamera] = useState(null);
-  const [isVivaModalOpen, setIsVivaModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -94,7 +92,7 @@ export default function App({ showVivaButton = true }) {
   };
 
   const handleSimulateNewIncident = () => {
-    // Force advance scenario to stage 2 (Intrusion) for immediate teacher demo!
+    // Advance scenario to stage 2 (Intrusion) for immediate demonstration
     setScenarioIndex(1);
     setSecondsLeft(10);
     const stage = SCENARIO_STAGES[1];
@@ -145,16 +143,15 @@ export default function App({ showVivaButton = true }) {
   return (
     <div className="min-h-screen bg-black text-zinc-100 flex flex-col font-sans">
       
-      {/* Navbar */}
+      {/* Navbar (showVivaButton is false on main for teacher presentation) */}
       <Navbar
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
-        onOpenVivaModal={() => setIsVivaModalOpen(true)}
         onOpenSearchModal={() => setIsSearchModalOpen(true)}
         onOpenReportModal={() => setIsReportModalOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        showVivaButton={showVivaButton}
+        showVivaButton={false}
       />
 
       {/* Main Content */}
@@ -247,12 +244,6 @@ export default function App({ showVivaButton = true }) {
         onClose={() => setIsReportModalOpen(false)}
         alerts={alerts}
         onExportCSV={handleExportCSV}
-      />
-
-      {/* Viva / Project Info Modal (Student Guide) */}
-      <VivaHelpModal
-        isOpen={isVivaModalOpen}
-        onClose={() => setIsVivaModalOpen(false)}
       />
 
       {/* Simple Footer */}
