@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShieldAlert, 
-  Activity, 
+  Video, 
+  BarChart2, 
+  Search, 
+  BookOpen, 
   Volume2, 
   VolumeX, 
-  Download, 
-  GraduationCap, 
-  Search, 
-  Camera, 
-  Clock, 
-  Cpu, 
-  BarChart3,
-  Layers
+  Download,
+  Info
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -31,129 +27,104 @@ export const Navbar = ({
   }, []);
 
   return (
-    <header className="bg-[#0b1220]/95 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40 px-4 py-2.5">
-      <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+    <header className="bg-black border-b border-zinc-800 sticky top-0 z-40 px-4 py-3">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
         
-        {/* Left: Brand & Telemetry */}
-        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-          <div className="flex items-center gap-3">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 glow-cyan">
-              <Camera className="w-5 h-5 animate-pulse" />
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
+        {/* Left: Project Title & Student Info */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white">
+              <Video className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-lg text-white tracking-wider font-mono">
-                  VISION<span className="text-cyan-400">GUARD</span> <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">AI</span>
+                <h1 className="font-semibold text-sm sm:text-base text-white tracking-tight">
+                  CCTV Analytics Platform
                 </h1>
-              </div>
-              <p className="text-[11px] text-slate-400 font-mono tracking-tight flex items-center gap-2">
-                <span>SOC Surveillance Analytics</span>
-                <span className="text-slate-600">•</span>
-                <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  6/6 Live Streams
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  BCA Project
                 </span>
+              </div>
+              <p className="text-xs text-zinc-400">
+                Student: <span className="text-zinc-200 font-medium">Ruchitha</span> • Dept of Computer Science
               </p>
             </div>
           </div>
-
-          {/* Quick Engine Telemetry (Desktop) */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-slate-900/80 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300">
-            <div className="flex items-center gap-1.5 text-cyan-400">
-              <Cpu className="w-3.5 h-3.5" />
-              <span>YOLOv8x</span>
-            </div>
-            <span className="text-slate-700">|</span>
-            <span className="text-slate-400">Latency: <span className="text-emerald-400 font-semibold">11.8ms</span></span>
-            <span className="text-slate-700">|</span>
-            <span className="text-slate-400">FPS: <span className="text-cyan-400 font-semibold">29.8</span></span>
-          </div>
         </div>
 
-        {/* Center: Navigation Tabs */}
-        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs font-medium">
+        {/* Center: Simple Navigation Tabs */}
+        <nav className="flex items-center bg-zinc-900 p-1 rounded-lg border border-zinc-800 text-xs">
           <button
             onClick={() => setActiveTab('grid')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-              activeTab === 'grid' 
-                ? 'bg-cyan-500 text-black font-semibold shadow-md' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+              activeTab === 'grid'
+                ? 'bg-white text-black font-semibold'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Camera className="w-3.5 h-3.5" />
-            <span>Live Cameras</span>
+            <Video className="w-3.5 h-3.5" />
+            <span>Live Feeds</span>
           </button>
-          
+
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-              activeTab === 'analytics' 
-                ? 'bg-cyan-500 text-black font-semibold shadow-md' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+              activeTab === 'analytics'
+                ? 'bg-white text-black font-semibold'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>AI Analytics</span>
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>Analytics</span>
           </button>
 
           <button
             onClick={onOpenSearchModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-zinc-400 hover:text-white transition-colors"
           >
             <Search className="w-3.5 h-3.5" />
-            <span>Forensic Search</span>
+            <span>Search Events</span>
           </button>
-        </div>
+        </nav>
 
-        {/* Right: Actions, Live Clock, and College Viva Helper */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+        {/* Right: Actions, Viva Guide & Clock */}
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
           
           {/* Sound Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            title={soundEnabled ? 'Mute Alert Audio' : 'Unmute Alert Audio'}
             className={`p-2 rounded-lg border text-xs transition-colors ${
-              soundEnabled 
-                ? 'bg-slate-900 border-cyan-500/40 text-cyan-400 hover:bg-cyan-950/30' 
-                : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300'
+              soundEnabled
+                ? 'bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-500'
             }`}
+            title={soundEnabled ? 'Alert Sound On' : 'Alert Sound Muted'}
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Export Report */}
+          {/* Download CSV */}
           <button
             onClick={onExportReport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-medium transition-colors"
-            title="Download CSV Incident Audit Log"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs transition-colors"
+            title="Download Event Log CSV"
           >
-            <Download className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">Audit CSV</span>
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export CSV</span>
           </button>
 
-          {/* College Viva & Docs Button (Special Presentation Weapon) */}
+          {/* Simple Project & Viva Help Button */}
           <button
             onClick={onOpenVivaModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-semibold shadow-lg shadow-emerald-950/50 border border-emerald-400/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-black text-xs font-semibold border border-zinc-300 transition-colors"
           >
-            <GraduationCap className="w-4 h-4 text-emerald-200" />
-            <span>Project Viva & Docs</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Project Info & Viva</span>
           </button>
 
-          {/* System Clock */}
-          <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-800 text-right font-mono">
-            <div>
-              <div className="text-xs font-bold text-slate-200 tracking-wider">
-                {time.toLocaleTimeString()}
-              </div>
-              <div className="text-[10px] text-slate-500 uppercase">
-                {time.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-              </div>
-            </div>
+          {/* Clock */}
+          <div className="hidden sm:block pl-2 border-l border-zinc-800 font-mono text-right text-xs text-zinc-400">
+            <div>{time.toLocaleTimeString()}</div>
           </div>
 
         </div>

@@ -3,372 +3,280 @@ import {
   Maximize2, 
   Eye, 
   EyeOff, 
-  Flame, 
-  ShieldAlert, 
-  Activity, 
   Crosshair, 
   ZoomIn, 
   ZoomOut,
-  AlertTriangle,
-  Move
+  AlertCircle
 } from 'lucide-react';
 
 export const CameraFeed = ({ 
   camera, 
   onSelectCamera, 
-  onTriggerAlert, 
   onOpenTripwire,
   isExpanded = false,
-  showHeatmapGlobal = false,
   showBoxesGlobal = true
 }) => {
   const [showBoxes, setShowBoxes] = useState(true);
-  const [showHeatmap, setShowHeatmap] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [videoError, setVideoError] = useState(false);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [dynamicDetections, setDynamicDetections] = useState(camera.detections || []);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const canvasRef = useRef(null);
-  const videoRef = useRef(null);
 
-  // Sync with global toggles
   useEffect(() => {
     setShowBoxes(showBoxesGlobal);
   }, [showBoxesGlobal]);
 
   useEffect(() => {
-    setShowHeatmap(showHeatmapGlobal);
-  }, [showHeatmapGlobal]);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  // Dynamic subtle jitter / simulated object movement for live realism
+  // Realistic CCTV Surveillance Canvas Animation
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDynamicDetections(prev => 
-        prev.map(det => {
-          const deltaX = (Math.random() - 0.5) * 1.2;
-          const deltaY = (Math.random() - 0.5) * 1.0;
-          return {
-            ...det,
-            box: [
-              Math.max(5, Math.min(80, det.box[0] + deltaX)),
-              Math.max(10, Math.min(75, det.box[1] + deltaY)),
-              det.box[2],
-              det.box[3]
-            ],
-            conf: Math.min(0.99, Math.max(0.85, +(det.conf + (Math.random() - 0.5) * 0.02).toFixed(2)))
-          };
-        })
-      );
-    }, 1200);
-
-    return () => clearInterval(interval);
-  }, [camera]);
-
-  // Fallback Canvas Surveillance Simulation if video fails or for high-FPS synthetic feed
-  useEffect(() => {
-    if (!videoError) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
+    let animationId;
+    let frame = 0;
 
-    let tick = 0;
+    // Simulated moving objects positions
+    const objects = [
+      { x: 30, y: 110, vx: 0.4, vy: 0, label: 'Person', conf: 94, type: 'person' },
+      { x: 220, y: 130, vx: -0.3, vy: 0, label: 'Person', conf: 91, type: 'person' }
+    ];
+
+    if (camera.sceneType === 'parking') {
+      objects.push({ x: 80, y: 150, vx: 0.6, vy: 0, label: 'Car', conf: 97, type: 'car' });
+    } else if (camera.sceneType === 'vault') {
+      objects.length = 0;
+      objects.push({ x: 160, y: 120, vx: 0.2, vy: 0, label: 'Unauthorized', conf: 98, type: 'intruder' });
+    }
+
     const render = () => {
-      tick++;
-      ctx.fillStyle = '#060a12';
+      frame++;
+      ctx.fillStyle = '#111317';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw perspective grid (Surveillance room floor)
-      ctx.strokeStyle = 'rgba(15, 23, 42, 0.8)';
+      // 1. Draw Architectural Background (Clean CCTV view)
+      ctx.fillStyle = '#1c1f26';
+      ctx.fillRect(0, 100, canvas.width, canvas.height - 100);
+
+      // Wall / Floor dividing perspective line
+      ctx.strokeStyle = '#2d3340';
       ctx.lineWidth = 1;
-      for (let i = 0; i < canvas.width; i += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, 100);
+      ctx.lineTo(canvas.width, 100);
+      ctx.stroke();
+
+      // Floor tiles perspective lines
+      for (let x = -100; x < canvas.width + 100; x += 60) {
         ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, canvas.height);
-        ctx.stroke();
-      }
-      for (let j = 0; j < canvas.height; j += 30) {
-        ctx.beginPath();
-        ctx.moveTo(0, j);
-        ctx.lineTo(canvas.width, j);
+        ctx.moveTo(x + 30, 100);
+        ctx.lineTo(x * 1.4, canvas.height);
         ctx.stroke();
       }
 
-      // Draw simulated architectural structures based on sceneType
-      ctx.fillStyle = 'rgba(30, 41, 59, 0.5)';
+      // Specific background details based on scene
       if (camera.sceneType === 'vault') {
-        ctx.fillRect(40, 50, 80, 180);
-        ctx.fillRect(360, 50, 80, 180);
+        // Server racks
+        ctx.fillStyle = '#0f1115';
+        ctx.fillRect(40, 30, 60, 120);
+        ctx.fillRect(260, 30, 60, 120);
+        ctx.fillStyle = '#333';
+        ctx.fillRect(45, 40, 50, 100);
+        ctx.fillRect(265, 40, 50, 100);
+        // Blinking server LEDs
+        for (let row = 0; row < 6; row++) {
+          ctx.fillStyle = (frame + row * 10) % 30 > 15 ? '#22c55e' : '#15803d';
+          ctx.fillRect(50, 50 + row * 14, 4, 4);
+          ctx.fillRect(270, 50 + row * 14, 4, 4);
+        }
       } else if (camera.sceneType === 'traffic' || camera.sceneType === 'parking') {
-        ctx.fillStyle = '#111827';
-        ctx.fillRect(0, 140, canvas.width, 100);
-        ctx.strokeStyle = '#374151';
-        ctx.setLineDash([10, 10]);
+        // Parking slots / Road markings
+        ctx.strokeStyle = '#3f4756';
+        ctx.setLineDash([8, 8]);
         ctx.beginPath();
-        ctx.moveTo(0, 190);
-        ctx.lineTo(canvas.width, 190);
+        ctx.moveTo(0, 150);
+        ctx.lineTo(canvas.width, 150);
         ctx.stroke();
         ctx.setLineDash([]);
+      } else {
+        // Doorway
+        ctx.fillStyle = '#0f1218';
+        ctx.fillRect(150, 30, 60, 80);
+        ctx.strokeStyle = '#3a4252';
+        ctx.strokeRect(150, 30, 60, 80);
       }
 
-      // Draw subtle CCTV noise grain
-      for (let n = 0; n < 80; n++) {
-        const nx = Math.random() * canvas.width;
-        const ny = Math.random() * canvas.height;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.fillRect(nx, ny, 2, 2);
+      // 2. Animate and Draw Objects
+      objects.forEach(obj => {
+        obj.x += obj.vx;
+        if (obj.x > canvas.width - 50) obj.vx = -Math.abs(obj.vx);
+        if (obj.x < 30) obj.vx = Math.abs(obj.vx);
+
+        if (obj.type === 'person' || obj.type === 'intruder') {
+          // Draw simple walking silhouette
+          ctx.fillStyle = obj.type === 'intruder' ? '#552222' : '#2d3748';
+          // Head
+          ctx.beginPath();
+          ctx.arc(obj.x + 12, obj.y - 30, 7, 0, Math.PI * 2);
+          ctx.fill();
+          // Body
+          ctx.fillRect(obj.x + 6, obj.y - 23, 12, 28);
+          // Legs
+          ctx.fillRect(obj.x + 6, obj.y + 5, 4, 20);
+          ctx.fillRect(obj.x + 14, obj.y + 5, 4, 20);
+        } else if (obj.type === 'car') {
+          // Draw car silhouette
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(obj.x, obj.y - 15, 60, 24);
+          ctx.fillRect(obj.x + 10, obj.y - 30, 40, 16);
+          // Wheels
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(obj.x + 15, obj.y + 10, 6, 0, Math.PI * 2);
+          ctx.arc(obj.x + 45, obj.y + 10, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 3. Draw OpenCV style Bounding Box
+        if (showBoxes) {
+          const isRed = obj.type === 'intruder' || camera.activeThreats > 0;
+          const boxColor = isRed ? '#ef4444' : '#22c55e'; // Clean Green or Red
+
+          const bw = obj.type === 'car' ? 66 : 28;
+          const bh = obj.type === 'car' ? 52 : 70;
+          const bx = obj.x - 2;
+          const by = obj.y - 40;
+
+          // Simple clean OpenCV bounding rectangle
+          ctx.strokeStyle = boxColor;
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(bx, by, bw, bh);
+
+          // Standard label tag
+          const labelText = `${obj.label} ${obj.conf}%`;
+          ctx.font = '10px Consolas, monospace';
+          const textWidth = ctx.measureText(labelText).width;
+
+          ctx.fillStyle = boxColor;
+          ctx.fillRect(bx, by - 14, textWidth + 6, 14);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(labelText, bx + 3, by - 3);
+        }
+      });
+
+      // Subtle CCTV Grain
+      ctx.fillStyle = 'rgba(255,255,255,0.015)';
+      for (let i = 0; i < 40; i++) {
+        ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
       }
 
-      // Scanning radar line
-      const scanY = (tick * 1.5) % canvas.height;
-      ctx.fillStyle = 'rgba(6, 182, 212, 0.08)';
-      ctx.fillRect(0, scanY, canvas.width, 3);
-
-      animationFrameId = requestAnimationFrame(render);
+      animationId = requestAnimationFrame(render);
     };
 
     render();
-
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [videoError, camera.sceneType]);
-
-  const handleZoom = (direction) => {
-    setZoomLevel(prev => {
-      if (direction === 'in') return Math.min(prev + 0.25, 2.0);
-      if (direction === 'out') return Math.max(prev - 0.25, 1.0);
-      return 1.0;
-    });
-  };
-
-  const handlePan = (direction) => {
-    setPanOffset(prev => {
-      const step = 15;
-      if (direction === 'left') return { ...prev, x: prev.x - step };
-      if (direction === 'right') return { ...prev, x: prev.x + step };
-      if (direction === 'up') return { ...prev, y: prev.y - step };
-      if (direction === 'down') return { ...prev, y: prev.y + step };
-      return { x: 0, y: 0 };
-    });
-  };
+    return () => cancelAnimationFrame(animationId);
+  }, [camera, showBoxes]);
 
   return (
-    <div className={`relative group bg-[#070b14] border border-slate-800/90 rounded-xl overflow-hidden shadow-xl transition-all duration-300 flex flex-col ${
-      camera.activeThreats > 0 ? 'border-red-500/60 ring-1 ring-red-500/30 glow-red' : 'hover:border-slate-700'
-    } ${isExpanded ? 'h-[75vh]' : 'h-[310px]'}`}>
+    <div className={`bg-zinc-950 border rounded-lg overflow-hidden flex flex-col transition-all ${
+      camera.activeThreats > 0 ? 'border-red-600 ring-1 ring-red-600/40' : 'border-zinc-800 hover:border-zinc-700'
+    } ${isExpanded ? 'h-[75vh]' : 'h-[285px]'}`}>
 
-      {/* Feed Container */}
-      <div className="relative flex-1 bg-black overflow-hidden select-none">
+      {/* Screen Header - Simple CCTV OSD */}
+      <div className="bg-black px-3 py-1.5 border-b border-zinc-800 flex items-center justify-between text-xs font-mono text-zinc-300">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-white">{camera.id}</span>
+          <span className="text-zinc-600">|</span>
+          <span className="truncate max-w-[150px]">{camera.name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 text-red-500 font-bold text-[11px]">
+            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+            REC
+          </span>
+          <span className="text-zinc-500">|</span>
+          <span className="text-zinc-400 text-[11px]">{camera.fps} FPS</span>
+        </div>
+      </div>
+
+      {/* Video / Canvas Area */}
+      <div className="relative flex-1 bg-black overflow-hidden flex items-center justify-center">
         
-        {/* Stream Visual (Video with Fallback Canvas) */}
         <div 
-          className="w-full h-full relative overflow-hidden transition-transform duration-200"
-          style={{ 
-            transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-            transformOrigin: 'center center' 
-          }}
+          className="w-full h-full relative transition-transform duration-200"
+          style={{ transform: `scale(${zoomLevel})` }}
         >
-          {!videoError ? (
-            <video
-              ref={videoRef}
-              src={camera.videoUrl}
-              autoPlay
-              loop
-              muted
-              playsInline
-              onError={() => setVideoError(true)}
-              className="w-full h-full object-cover filter contrast-[1.1] brightness-90 saturate-[0.85]"
-            />
-          ) : (
-            <canvas 
-              ref={canvasRef} 
-              width={480} 
-              height={270} 
-              className="w-full h-full object-cover" 
-            />
-          )}
+          <canvas 
+            ref={canvasRef} 
+            width={400} 
+            height={225} 
+            className="w-full h-full object-cover" 
+          />
 
-          {/* Surveillance Scanlines & Grid Overlay */}
-          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(#00000000_60%,#000000ee_100%)] opacity-70"></div>
-          <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] opacity-40"></div>
+          {/* Simple CCTV Date Timecode (Bottom Left) */}
+          <div className="absolute bottom-2 left-2 pointer-events-none font-mono text-[10px] text-zinc-300 bg-black/80 px-2 py-0.5 rounded border border-zinc-800">
+            {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
+          </div>
 
-          {/* Crowd Density Heatmap Simulation Layer */}
-          {showHeatmap && (
-            <div className="absolute inset-0 pointer-events-none opacity-60 mix-blend-screen transition-opacity duration-300">
-              <div className="absolute top-[25%] left-[20%] w-[35%] h-[45%] rounded-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 blur-2xl opacity-75 animate-pulse"></div>
-              <div className="absolute top-[40%] right-[15%] w-[30%] h-[35%] rounded-full bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-500 blur-xl opacity-60"></div>
-            </div>
-          )}
-
-          {/* YOLO AI Bounding Box Overlays */}
-          {showBoxes && dynamicDetections.map((det) => {
-            const [x, y, w, h] = det.box;
-            const isAlert = det.color === '#ef4444' || det.label.includes('INTRUDER');
-            return (
-              <div
-                key={det.id}
-                style={{
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  width: `${w}%`,
-                  height: `${h}%`,
-                  borderColor: det.color
-                }}
-                className={`absolute border-2 transition-all duration-500 pointer-events-none ${
-                  isAlert ? 'border-red-500 bg-red-500/15 animate-pulse-fast' : 'bg-cyan-500/5'
-                }`}
-              >
-                {/* Corner reticle marks */}
-                <div className="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2" style={{ borderColor: det.color }}></div>
-                <div className="absolute -top-1 -right-1 w-2 h-2 border-t-2 border-r-2" style={{ borderColor: det.color }}></div>
-                <div className="absolute -bottom-1 -left-1 w-2 h-2 border-b-2 border-l-2" style={{ borderColor: det.color }}></div>
-                <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b-2 border-r-2" style={{ borderColor: det.color }}></div>
-
-                {/* AI Label Pill */}
-                <div 
-                  className="absolute -top-6 left-0 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded flex items-center gap-1.5 whitespace-nowrap shadow-md"
-                  style={{ backgroundColor: det.color, color: det.color === '#f59e0b' ? '#000' : '#fff' }}
-                >
-                  <span>{det.label}</span>
-                  <span className="opacity-80 font-normal">{(det.conf * 100).toFixed(0)}%</span>
-                  {det.trackId && <span className="opacity-70 text-[9px] bg-black/30 px-1 rounded">#{det.trackId}</span>}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Virtual Tripwire Geofence Marker */}
+          {/* Alert Warning if active */}
           {camera.activeThreats > 0 && (
-            <div className="absolute inset-0 pointer-events-none">
-              <svg className="w-full h-full">
-                <line 
-                  x1="15%" y1="70%" x2="85%" y2="70%" 
-                  stroke="#ef4444" 
-                  strokeWidth="2" 
-                  strokeDasharray="6,4" 
-                  className="animate-pulse"
-                />
-                <text x="18%" y="67%" fill="#ef4444" fontSize="10" fontFamily="monospace" fontWeight="bold">
-                  [VIRTUAL TRIPWIRE BREACHED]
-                </text>
-              </svg>
+            <div className="absolute top-2 right-2 pointer-events-none font-mono text-[10px] text-white bg-red-600 px-2 py-0.5 rounded font-bold flex items-center gap-1 animate-pulse">
+              <AlertCircle className="w-3 h-3" />
+              <span>ALERT DETECTED</span>
             </div>
           )}
         </div>
 
-        {/* Top HUD: Camera ID, Name, Location & Recording indicator */}
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none z-10 text-white font-mono text-[11px]">
-          <div className="flex items-center gap-2 bg-black/70 backdrop-blur-md px-2 py-1 rounded border border-slate-700/60">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-            <span className="font-bold text-cyan-400">{camera.id}</span>
-            <span className="text-slate-400">|</span>
-            <span className="truncate max-w-[140px] text-slate-200">{camera.name}</span>
-          </div>
-
-          <div className="flex items-center gap-2 bg-black/70 backdrop-blur-md px-2 py-1 rounded border border-slate-700/60">
-            <span className="text-red-400 font-bold flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-              REC
-            </span>
-            <span className="text-slate-400">|</span>
-            <span className="text-slate-300">{camera.fps} FPS</span>
-          </div>
-        </div>
-
-        {/* Bottom Left HUD: Resolution, Model, Person & Vehicle Counters */}
-        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 pointer-events-none z-10 font-mono text-[10px]">
-          <span className="bg-black/75 px-1.5 py-0.5 rounded text-slate-300 border border-slate-800">
-            {camera.resolution}
-          </span>
-          <span className="bg-black/75 px-1.5 py-0.5 rounded text-emerald-400 border border-slate-800">
-            P: {camera.peopleCount}
-          </span>
-          {camera.vehicleCount > 0 && (
-            <span className="bg-black/75 px-1.5 py-0.5 rounded text-cyan-400 border border-slate-800">
-              V: {camera.vehicleCount}
-            </span>
-          )}
-          {camera.activeThreats > 0 && (
-            <span className="bg-red-950/90 text-red-400 px-1.5 py-0.5 rounded font-bold border border-red-700 animate-pulse flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" />
-              ALERT
-            </span>
-          )}
-        </div>
-
-        {/* Hover / On-Screen Controls */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-1 z-20 opacity-90 group-hover:opacity-100 transition-opacity">
-          
-          {/* Toggle Bounding Boxes */}
+        {/* Simple Student Control Bar on Bottom Right */}
+        <div className="absolute bottom-2 right-2 flex items-center gap-1 z-20">
           <button
             onClick={() => setShowBoxes(!showBoxes)}
-            className={`p-1.5 rounded bg-black/80 hover:bg-slate-800 text-slate-300 border border-slate-700/80 transition-colors ${
-              showBoxes ? 'text-cyan-400' : 'text-slate-500'
+            className={`p-1.5 rounded border text-xs transition-colors ${
+              showBoxes 
+                ? 'bg-zinc-800 border-zinc-600 text-white' 
+                : 'bg-black/80 border-zinc-800 text-zinc-500'
             }`}
-            title="Toggle YOLO Bounding Boxes"
+            title="Toggle Bounding Boxes"
           >
-            {showBoxes ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {showBoxes ? <Eye className="w-3 h-3 text-green-400" /> : <EyeOff className="w-3 h-3" />}
           </button>
 
-          {/* Toggle Heatmap */}
-          <button
-            onClick={() => setShowHeatmap(!showHeatmap)}
-            className={`p-1.5 rounded bg-black/80 hover:bg-slate-800 border border-slate-700/80 transition-colors ${
-              showHeatmap ? 'text-amber-400 bg-amber-950/40' : 'text-slate-400'
-            }`}
-            title="Toggle Crowd Density Heatmap"
-          >
-            <Flame className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Draw Virtual Tripwire Button */}
           <button
             onClick={() => onOpenTripwire(camera)}
-            className="p-1.5 rounded bg-black/80 hover:bg-slate-800 text-emerald-400 border border-slate-700/80 transition-colors"
-            title="Draw Virtual Tripwire / Geofence"
+            className="p-1.5 rounded bg-black/80 border border-zinc-800 hover:bg-zinc-800 text-zinc-300"
+            title="Tripwire Config"
           >
-            <Crosshair className="w-3.5 h-3.5" />
+            <Crosshair className="w-3 h-3" />
           </button>
 
-          {/* PTZ Zoom in/out */}
           <button
-            onClick={() => handleZoom('in')}
-            className="p-1.5 rounded bg-black/80 hover:bg-slate-800 text-slate-300 border border-slate-700/80"
-            title="Simulated PTZ Zoom In"
+            onClick={() => setZoomLevel(prev => prev === 1 ? 1.4 : 1)}
+            className="p-1.5 rounded bg-black/80 border border-zinc-800 hover:bg-zinc-800 text-zinc-300"
+            title="Zoom"
           >
-            <ZoomIn className="w-3.5 h-3.5" />
+            {zoomLevel > 1 ? <ZoomOut className="w-3 h-3" /> : <ZoomIn className="w-3 h-3" />}
           </button>
-          
-          {zoomLevel > 1 && (
-            <button
-              onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
-              className="p-1.5 rounded bg-black/80 hover:bg-slate-800 text-slate-300 border border-slate-700/80"
-              title="Reset Zoom"
-            >
-              <ZoomOut className="w-3.5 h-3.5" />
-            </button>
-          )}
 
-          {/* Expand Fullscreen / Single Camera Mode */}
           <button
             onClick={() => onSelectCamera(camera)}
-            className="p-1.5 rounded bg-black/80 hover:bg-slate-800 text-slate-300 border border-slate-700/80"
-            title="Expand Camera Focus"
+            className="p-1.5 rounded bg-black/80 border border-zinc-800 hover:bg-zinc-800 text-zinc-300"
+            title="Maximize View"
           >
-            <Maximize2 className="w-3.5 h-3.5" />
+            <Maximize2 className="w-3 h-3" />
           </button>
         </div>
 
       </div>
 
       {/* Footer Info Strip */}
-      <div className="bg-[#0b101d] px-3 py-1.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
-        <span className="truncate max-w-[180px]">{camera.location}</span>
+      <div className="bg-zinc-900 px-3 py-1 border-t border-zinc-800 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+        <span className="truncate">{camera.location}</span>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/50">
-            {camera.model.split(' ')[0]}
-          </span>
-          <span className="text-emerald-400">● {camera.status}</span>
+          <span>{camera.resolution}</span>
+          <span className="text-emerald-500">● Online</span>
         </div>
       </div>
 

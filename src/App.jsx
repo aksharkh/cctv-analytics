@@ -9,14 +9,14 @@ import { TripwireModal } from './components/TripwireModal';
 import { CameraFeed } from './components/CameraFeed';
 import { INITIAL_CAMERAS, INITIAL_ALERTS } from './data/mockData';
 import { playAlertSound } from './utils/audioAlert';
-import { X, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { X, Bell } from 'lucide-react';
 
 export default function App() {
   const [cameras, setCameras] = useState(INITIAL_CAMERAS);
   const [alerts, setAlerts] = useState(INITIAL_ALERTS);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState('grid'); // 'grid' | 'analytics'
-  const [selectedCamera, setSelectedCamera] = useState(null); // for single view focus
+  const [selectedCamera, setSelectedCamera] = useState(null);
   const [tripwireCamera, setTripwireCamera] = useState(null);
   const [isVivaModalOpen, setIsVivaModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -24,14 +24,12 @@ export default function App() {
 
   const showToast = (msg) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Add new alert helper
   const handleAddNewAlert = (newAlert) => {
     setAlerts(prev => [newAlert, ...prev]);
     
-    // Increment threat on target camera
     setCameras(prev => prev.map(c => 
       c.id === newAlert.camId ? { ...c, activeThreats: c.activeThreats + 1 } : c
     ));
@@ -40,63 +38,61 @@ export default function App() {
       playAlertSound(newAlert.severity);
     }
 
-    showToast(`🚨 ${newAlert.type} on ${newAlert.camId}`);
+    showToast(`Alert: ${newAlert.type} on ${newAlert.camId}`);
   };
 
-  // Acknowledge alert
   const handleAcknowledgeAlert = (alertId) => {
     setAlerts(prev => prev.map(a => 
       a.id === alertId ? { ...a, status: 'CLEARED' } : a
     ));
-    showToast('Incident acknowledged and cleared.');
+    showToast('Alert acknowledged');
   };
 
-  // Simulate an incident dynamically
   const handleSimulateNewIncident = () => {
-    const incidentTemplates = [
+    const samples = [
       {
         camId: 'CAM-02',
         camName: 'Server Room & Vault',
-        type: 'Restricted Zone Intrusion',
+        type: 'Restricted Area Intrusion',
         severity: 'critical',
         confidence: '98.2%',
-        description: 'Unidentified individual detected crossing optical security tripwire.',
-        objectClass: 'Unauthorized Subject'
+        description: 'Motion detected in restricted server room after hours.',
+        objectClass: 'Unauthorized Person'
       },
       {
         camId: 'CAM-05',
         camName: 'Parking Lot Zone B',
-        type: 'Vehicle Speeding Violation',
+        type: 'Speed Violation',
         severity: 'warning',
-        confidence: '94.6%',
-        description: 'Black SUV detected traveling at 42 km/h in 15 km/h campus speed zone.',
-        objectClass: 'Vehicle (SUV)'
+        confidence: '94.0%',
+        description: 'Vehicle detected above 20 km/h campus limit.',
+        objectClass: 'Vehicle'
       },
       {
         camId: 'CAM-03',
         camName: 'Perimeter Fence East',
-        type: 'Loitering & Fence Tampering',
+        type: 'Loitering Alert',
         severity: 'warning',
-        confidence: '89.7%',
-        description: 'Person detected lingering near boundary perimeter fence for over 180 seconds.',
-        objectClass: 'Person (Suspicious)'
+        confidence: '89.5%',
+        description: 'Subject lingering near perimeter boundary.',
+        objectClass: 'Person'
       },
       {
         camId: 'CAM-04',
-        camName: 'Corporate Lobby & Reception',
-        type: 'Unattended Luggage Detected',
+        camName: 'Corporate Lobby',
+        type: 'Unattended Bag',
         severity: 'critical',
-        confidence: '91.8%',
-        description: 'Duffel bag left stationary without owner in high-traffic atrium corridor.',
-        objectClass: 'Abandoned Baggage'
+        confidence: '91.0%',
+        description: 'Stationary backpack detected without owner.',
+        objectClass: 'Luggage'
       }
     ];
 
-    const template = incidentTemplates[Math.floor(Math.random() * incidentTemplates.length)];
+    const pick = samples[Math.floor(Math.random() * samples.length)];
     const newId = `ALT-${Math.floor(2000 + Math.random() * 8000)}`;
 
     handleAddNewAlert({
-      ...template,
+      ...pick,
       id: newId,
       timestamp: 'Just now',
       timeExact: new Date().toLocaleTimeString(),
@@ -104,19 +100,6 @@ export default function App() {
     });
   };
 
-  // Periodic automatic simulated background events (Every 45 seconds)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      // 50% chance to simulate a subtle event
-      if (Math.random() > 0.45) {
-        handleSimulateNewIncident();
-      }
-    }, 45000);
-
-    return () => clearInterval(timer);
-  }, [soundEnabled]);
-
-  // Focus a camera from alert click
   const handleFocusCamera = (camId) => {
     const target = cameras.find(c => c.id === camId);
     if (target) {
@@ -125,9 +108,8 @@ export default function App() {
     }
   };
 
-  // Export CSV Report
   const handleExportReport = () => {
-    const headers = ['Alert ID', 'Camera ID', 'Camera Name', 'Incident Type', 'Severity', 'Confidence', 'Timestamp', 'Object Class', 'Status', 'Description'];
+    const headers = ['Alert ID', 'Camera ID', 'Camera Name', 'Incident Type', 'Severity', 'Confidence', 'Time', 'Object', 'Status', 'Description'];
     const rows = alerts.map(a => [
       a.id,
       a.camId,
@@ -145,18 +127,18 @@ export default function App() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `VisionGuard_Security_Audit_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `CCTV_Incident_Log_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    showToast('Downloaded Security Audit CSV Report');
+    showToast('Downloaded Incident Log CSV');
   };
 
   return (
-    <div className="min-h-screen bg-[#080c14] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-black text-zinc-100 flex flex-col font-sans">
       
-      {/* Top Navbar */}
+      {/* Navbar */}
       <Navbar
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
@@ -167,20 +149,17 @@ export default function App() {
         onExportReport={handleExportReport}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-[1920px] w-full mx-auto p-3 sm:p-4">
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4">
         {activeTab === 'grid' ? (
-          <div className="flex flex-col lg:flex-row gap-4 items-start">
-            {/* Live Camera Grid (Main Area) */}
+          <div className="flex flex-col lg:flex-row gap-3.5 items-start">
             <CameraGrid
               cameras={cameras}
               onSelectCamera={(cam) => setSelectedCamera(cam)}
-              onTriggerAlert={handleAddNewAlert}
               onOpenTripwire={(cam) => setTripwireCamera(cam)}
               onSimulateNewIncident={handleSimulateNewIncident}
             />
 
-            {/* Real-time Alerts Sidebar */}
             <AlertSidebar
               alerts={alerts}
               onAcknowledgeAlert={handleAcknowledgeAlert}
@@ -188,44 +167,42 @@ export default function App() {
             />
           </div>
         ) : (
-          /* Analytics & Deep Learning Dashboard */
           <AnalyticsPanel />
         )}
       </main>
 
-      {/* Floating Toast Notification */}
+      {/* Clean Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900/95 border border-cyan-500/50 text-white text-xs font-mono px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2.5 animate-bounce">
-          <ShieldAlert className="w-4 h-4 text-cyan-400" />
+        <div className="fixed bottom-4 right-4 z-50 bg-zinc-900 border border-zinc-700 text-white text-xs font-mono px-3.5 py-2 rounded-lg shadow-xl flex items-center gap-2">
+          <Bell className="w-3.5 h-3.5 text-zinc-300" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Single Camera Maximize Focus Modal */}
+      {/* Single Camera Focus Modal */}
       {selectedCamera && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md animate-fadeIn">
-          <div className="bg-[#0b1220] border border-slate-700 w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-sm">
+          <div className="bg-zinc-950 border border-zinc-800 w-full max-w-5xl rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-3 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-cyan-400 font-bold text-sm">{selectedCamera.id}</span>
-                <span className="text-slate-400">•</span>
-                <span className="text-sm font-semibold text-white">{selectedCamera.name}</span>
-                <span className="text-xs text-slate-500">({selectedCamera.location})</span>
+                <span className="font-bold text-white">{selectedCamera.id}</span>
+                <span className="text-zinc-600">•</span>
+                <span>{selectedCamera.name}</span>
+                <span className="text-zinc-500">({selectedCamera.location})</span>
               </div>
               <button
                 onClick={() => setSelectedCamera(null)}
-                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white"
+                className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 bg-black">
+            <div className="p-3 bg-black">
               <CameraFeed
                 camera={selectedCamera}
                 isExpanded={true}
                 onSelectCamera={() => {}}
-                onTriggerAlert={handleAddNewAlert}
                 onOpenTripwire={() => {
                   const target = selectedCamera;
                   setSelectedCamera(null);
@@ -237,7 +214,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Interactive Virtual Tripwire Configurator Modal */}
+      {/* Tripwire Modal */}
       <TripwireModal
         isOpen={!!tripwireCamera}
         camera={tripwireCamera}
@@ -253,21 +230,19 @@ export default function App() {
         onExportReport={handleExportReport}
       />
 
-      {/* BCA Project Viva & Docs Helper Modal */}
+      {/* Viva / Project Info Modal */}
       <VivaHelpModal
         isOpen={isVivaModalOpen}
         onClose={() => setIsVivaModalOpen(false)}
       />
 
-      {/* Bottom Footer */}
-      <footer className="bg-[#0b101d] border-t border-slate-800/80 px-4 py-2 text-center text-xs text-slate-500 font-mono flex flex-col sm:flex-row items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span>VisionGuard AI Surveillance Platform</span>
-          <span>•</span>
-          <span className="text-cyan-400">BCA Final Project Ready</span>
+      {/* Simple Footer */}
+      <footer className="bg-zinc-950 border-t border-zinc-900 px-4 py-2.5 text-center text-xs text-zinc-500 flex flex-col sm:flex-row items-center justify-between gap-1">
+        <div>
+          <span>CCTV Video Analytics Project • BCA Computer Science</span>
         </div>
         <div>
-          <span>Designed for Ruchitha • 100% Client-Side Engine • Ready for Vercel</span>
+          <span>Student Project by <strong className="text-zinc-400">Ruchitha</strong></span>
         </div>
       </footer>
 
