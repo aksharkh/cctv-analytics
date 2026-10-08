@@ -6,8 +6,7 @@ import {
   BookOpen, 
   Volume2, 
   VolumeX, 
-  Download,
-  Info
+  FileText
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -15,9 +14,10 @@ export const Navbar = ({
   setSoundEnabled, 
   onOpenVivaModal, 
   onOpenSearchModal, 
+  onOpenReportModal,
   activeTab, 
   setActiveTab,
-  onExportReport
+  showVivaButton = true
 }) => {
   const [time, setTime] = useState(new Date());
 
@@ -52,7 +52,7 @@ export const Navbar = ({
           </div>
         </div>
 
-        {/* Center: Simple Navigation Tabs */}
+        {/* Center: Navigation Tabs */}
         <nav className="flex items-center bg-zinc-900 p-1 rounded-lg border border-zinc-800 text-xs">
           <button
             onClick={() => setActiveTab('grid')}
@@ -87,7 +87,7 @@ export const Navbar = ({
           </button>
         </nav>
 
-        {/* Right: Actions, Viva Guide & Clock */}
+        {/* Right: Actions, Report Modal & Viva Guide */}
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
           
           {/* Sound Toggle */}
@@ -103,24 +103,27 @@ export const Navbar = ({
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Download CSV */}
+          {/* Time-Period Audit Report (PDF/CSV) Button */}
           <button
-            onClick={onExportReport}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs transition-colors"
-            title="Download Event Log CSV"
+            onClick={onOpenReportModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-medium transition-colors"
+            title="Filter by time period and export signed PDF report"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Export CSV</span>
+            <FileText className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Audit Reports</span>
           </button>
 
-          {/* Simple Project & Viva Help Button */}
-          <button
-            onClick={onOpenVivaModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-black text-xs font-semibold border border-zinc-300 transition-colors"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Project Info & Viva</span>
-          </button>
+          {/* Project & Viva Help Button (Shown on student-guide branch) */}
+          {showVivaButton && (
+            <button
+              onClick={onOpenVivaModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-black text-xs font-semibold border border-zinc-300 transition-colors"
+              title="Student preparation notes & Viva answers"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Project Info & Viva</span>
+            </button>
+          )}
 
           {/* Clock */}
           <div className="hidden sm:block pl-2 border-l border-zinc-800 font-mono text-right text-xs text-zinc-400">

@@ -6,26 +6,69 @@ import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { ForensicSearchModal } from './components/ForensicSearchModal';
 import { VivaHelpModal } from './components/VivaHelpModal';
 import { TripwireModal } from './components/TripwireModal';
+import { ReportModal } from './components/ReportModal';
 import { CameraFeed } from './components/CameraFeed';
 import { INITIAL_CAMERAS, INITIAL_ALERTS } from './data/mockData';
+import { SCENARIO_STAGES } from './data/scenarioEngine';
 import { playAlertSound } from './utils/audioAlert';
 import { X, Bell } from 'lucide-react';
 
-export default function App() {
+export default function App({ showVivaButton = true }) {
   const [cameras, setCameras] = useState(INITIAL_CAMERAS);
   const [alerts, setAlerts] = useState(INITIAL_ALERTS);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [activeTab, setActiveTab] = useState('grid'); // 'grid' | 'analytics'
+  const [activeTab, setActiveTab] = useState('grid');
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [tripwireCamera, setTripwireCamera] = useState(null);
   const [isVivaModalOpen, setIsVivaModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
+  // 10-Second Dynamic Motion & Incident Cycle
+  const [scenarioIndex, setScenarioIndex] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(10);
+
+  const currentScenario = SCENARIO_STAGES[scenarioIndex];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          // Advance to next 10s scenario stage
+          setScenarioIndex((current) => {
+            const nextIdx = (current + 1) % SCENARIO_STAGES.length;
+            const nextScenario = SCENARIO_STAGES[nextIdx];
+
+            // Trigger matching real-time alert for this stage
+            if (nextScenario?.triggeredAlert) {
+              const liveAlert = {
+                ...nextScenario.triggeredAlert,
+                id: `EVT-${Math.floor(1000 + Math.random() * 9000)}`,
+                timeExact: new Date().toLocaleTimeString(),
+                timestamp: 'Just now'
+              };
+
+              setAlerts((prevAlerts) => [liveAlert, ...prevAlerts.slice(0, 19)]);
+
+              if (soundEnabled && liveAlert.severity !== 'info') {
+                playAlertSound(liveAlert.severity);
+              }
+
+              setToastMessage(`Detection: ${liveAlert.type} on ${liveAlert.camId}`);
+              setTimeout(() => setToastMessage(null), 3500);
+            }
+
+            return nextIdx;
+          });
+          return 10;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [soundEnabled]);
 
   const handleAddNewAlert = (newAlert) => {
     setAlerts(prev => [newAlert, ...prev]);
@@ -38,65 +81,28 @@ export default function App() {
       playAlertSound(newAlert.severity);
     }
 
-    showToast(`Alert: ${newAlert.type} on ${newAlert.camId}`);
+    setToastMessage(`Alert: ${newAlert.type} on ${newAlert.camId}`);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleAcknowledgeAlert = (alertId) => {
     setAlerts(prev => prev.map(a => 
       a.id === alertId ? { ...a, status: 'CLEARED' } : a
     ));
-    showToast('Alert acknowledged');
+    setToastMessage('Alert acknowledged');
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
   const handleSimulateNewIncident = () => {
-    const samples = [
-      {
-        camId: 'CAM-02',
-        camName: 'Server Room & Vault',
-        type: 'Restricted Area Intrusion',
-        severity: 'critical',
-        confidence: '98.2%',
-        description: 'Motion detected in restricted server room after hours.',
-        objectClass: 'Unauthorized Person'
-      },
-      {
-        camId: 'CAM-05',
-        camName: 'Parking Lot Zone B',
-        type: 'Speed Violation',
-        severity: 'warning',
-        confidence: '94.0%',
-        description: 'Vehicle detected above 20 km/h campus limit.',
-        objectClass: 'Vehicle'
-      },
-      {
-        camId: 'CAM-03',
-        camName: 'Perimeter Fence East',
-        type: 'Loitering Alert',
-        severity: 'warning',
-        confidence: '89.5%',
-        description: 'Subject lingering near perimeter boundary.',
-        objectClass: 'Person'
-      },
-      {
-        camId: 'CAM-04',
-        camName: 'Corporate Lobby',
-        type: 'Unattended Bag',
-        severity: 'critical',
-        confidence: '91.0%',
-        description: 'Stationary backpack detected without owner.',
-        objectClass: 'Luggage'
-      }
-    ];
-
-    const pick = samples[Math.floor(Math.random() * samples.length)];
-    const newId = `ALT-${Math.floor(2000 + Math.random() * 8000)}`;
-
+    // Force advance scenario to stage 2 (Intrusion) for immediate teacher demo!
+    setScenarioIndex(1);
+    setSecondsLeft(10);
+    const stage = SCENARIO_STAGES[1];
     handleAddNewAlert({
-      ...pick,
-      id: newId,
+      ...stage.triggeredAlert,
+      id: `EVT-${Math.floor(2000 + Math.random() * 8000)}`,
       timestamp: 'Just now',
-      timeExact: new Date().toLocaleTimeString(),
-      status: 'ACTIVE'
+      timeExact: new Date().toLocaleTimeString()
     });
   };
 
@@ -108,7 +114,7 @@ export default function App() {
     }
   };
 
-  const handleExportReport = () => {
+  const handleExportCSV = () => {
     const headers = ['Alert ID', 'Camera ID', 'Camera Name', 'Incident Type', 'Severity', 'Confidence', 'Time', 'Object', 'Status', 'Description'];
     const rows = alerts.map(a => [
       a.id,
@@ -127,12 +133,13 @@ export default function App() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `CCTV_Incident_Log_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `CCTV_Surveillance_Report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    showToast('Downloaded Incident Log CSV');
+    setToastMessage('Downloaded Incident Log CSV');
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
   return (
@@ -144,9 +151,10 @@ export default function App() {
         setSoundEnabled={setSoundEnabled}
         onOpenVivaModal={() => setIsVivaModalOpen(true)}
         onOpenSearchModal={() => setIsSearchModalOpen(true)}
+        onOpenReportModal={() => setIsReportModalOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onExportReport={handleExportReport}
+        showVivaButton={showVivaButton}
       />
 
       {/* Main Content */}
@@ -158,6 +166,8 @@ export default function App() {
               onSelectCamera={(cam) => setSelectedCamera(cam)}
               onOpenTripwire={(cam) => setTripwireCamera(cam)}
               onSimulateNewIncident={handleSimulateNewIncident}
+              currentScenario={currentScenario}
+              secondsLeft={secondsLeft}
             />
 
             <AlertSidebar
@@ -208,13 +218,14 @@ export default function App() {
                   setSelectedCamera(null);
                   setTripwireCamera(target);
                 }}
+                scenarioData={currentScenario?.cameraStates?.[selectedCamera.id]}
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* Tripwire Modal */}
+      {/* Interactive Tripwire Modal */}
       <TripwireModal
         isOpen={!!tripwireCamera}
         camera={tripwireCamera}
@@ -227,10 +238,18 @@ export default function App() {
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
         alerts={alerts}
-        onExportReport={handleExportReport}
+        onExportReport={handleExportCSV}
       />
 
-      {/* Viva / Project Info Modal */}
+      {/* Time-Period Audit Report (PDF/CSV) Modal */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        alerts={alerts}
+        onExportCSV={handleExportCSV}
+      />
+
+      {/* Viva / Project Info Modal (Student Guide) */}
       <VivaHelpModal
         isOpen={isVivaModalOpen}
         onClose={() => setIsVivaModalOpen(false)}
@@ -239,7 +258,7 @@ export default function App() {
       {/* Simple Footer */}
       <footer className="bg-zinc-950 border-t border-zinc-900 px-4 py-2.5 text-center text-xs text-zinc-500 flex flex-col sm:flex-row items-center justify-between gap-1">
         <div>
-          <span>CCTV Video Analytics Project • BCA Computer Science</span>
+          <span>CCTV Video Analytics Platform • BCA Computer Science</span>
         </div>
         <div>
           <span>Student Project by <strong className="text-zinc-400">Ruchitha</strong></span>
